@@ -4,4 +4,4 @@ Aligning File: ./tmp/tmp.plp
 Created lattice with 3 nodes / 2 arcs from label file
  WARNING [-8232]  ExpandWordNet: Pronunciation 1 of sp is 'tee' word in HVite
  WARNING [-8232]  ExpandWordNet: Pronunciation 1 of sp is 'tee' word in HVite
-sp A1 sp  ==  [68 frames] 26.8660 [Ac=1826.9 LM=0.0] (Act=6.9)
+sp XIN4 sp  ==  [66 frames] 25.6690 [Ac=1694.2 LM=0.0] (Act=8.4)

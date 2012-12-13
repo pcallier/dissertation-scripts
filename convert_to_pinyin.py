@@ -1,10 +1,13 @@
 #!/usr/bin/python
 # coding=utf-8
- 
+""" convert_to_pinyin.py
+Usage: convert_to_pinyin.py to_convert
+    convert string to_convert to Hanyu pinyin, writing results to stdout.    
+    Requires internet access.
+"""
 # going to use this tool: http://www.purpleculture.net/chinese-pinyin-converter/
 # how to use: POST with a form, see below.
 
-# Let's try it!
 import urllib,urllib2,re,string,sys, time
 
 class ConversionFailure(Exception):
@@ -112,14 +115,15 @@ def extract_pinyin(request_result):
 
     return(pinyin_result.strip())
 
-to_convert = sys.argv[1].strip()
-try:
-    conversion_result = get_conversion_result(to_convert)
-except NoHanCharacters:
-    pinyin = to_convert
-    print (pinyin.decode('utf-8'))
-    sys.exit()
-    
-pinyin = extract_pinyin(conversion_result)
-print (pinyin.encode('utf-8'))
+def main(to_convert):
+    try:
+        conversion_result = get_conversion_result(to_convert)
+    except NoHanCharacters:
+        pinyin = to_convert
+        return pinyin.decode('utf-8')
+        
+    pinyin = extract_pinyin(conversion_result)
+    return pinyin.encode('utf-8')
 
+if __name__ == "__main__":
+    print(main(sys.argv[1].strip()))

@@ -23,6 +23,7 @@
 import re
 import sys
 import os
+import os
 import shutil
 import codecs
 import subprocess
@@ -31,32 +32,39 @@ import time
 text_in = 5
 
 def normalize_data(table_filename = "test_table.txt"):
-    table_filename = "test_table.txt"
-
     # normalize transcript data in table
     # these tuples of regexes and substitution strings will be 
     # applied in order to each line of transcript
-    normalzn_rexs = [(re.compile(r"^(x[0-9]+|silence)$",re.I), ""),
-                    (re.compile(r"(（|\()(。|\.)(\)|）)|silence"), "{SL}"),
-                    (re.compile(r"。|\."), "{SL}"),
-                    (re.compile(r"(％|%)\s+((ha1 )+?|(he1 )+?)\s*(％|%)", re.I), "{LG}"),
-                    (re.compile(r"\[breath\]", re.I), "{BR}"),
-                    (re.compile(r"\[.+?\]|\#|\+|\^|\%|％|\-|\–|\～|\~|，|,|\:|：|？|\?"), ""),
-                    (re.compile("\xe3\x80\x80|\xef\xbc\x88|\xef\xbc\x8d|\xef\xbc\x89"), ""),
-                    (re.compile(r"(\S)\{"), "\\1 {"),
-                    (re.compile(r"\}(\S)"), "} \\1"),
+    normalzn_rexs = [(re.compile(u"^(x[0-9]+|silence)$",re.I), ""),
+                    (re.compile(u"(（|\\()(。|\\.)(\\)|）)|silence"), "{SL}"),
+                    (re.compile(u"\\，|\\,|\\~|\\～|\\-|\\–"), "{SL}"),
+                    (re.compile(u"(％|%)\\s+((ha1 )+?|(he1 )+?)\\s*(％|%)", re.I), "{LG}"),
+                    (re.compile(u"\\[breath\\]", re.I), "{BR}"),
+                    (re.compile(u"\\。|\\.|\\[.+?\\]|\\#|\\+|\\^|\\%|\\％|\\-|\\–|\\～|\\~|\\，|\\,|\\:|\\：|\\？|\\?"), ""),
+                    (re.compile("\xe3\x80\x80|\xef\xbc\x88|\xef\xbc\x8d|\xef\xbc\x89".decode('utf-8')), ""),
+                    (re.compile(u"(\\S)\\{"), "\\1 {"),
+                    (re.compile(u"\\}(\\S)"), "} \\1"),
                     #(re.compile(r"(\w+)[1-5]"),"\\1"),     #remove the tone numbers
-                    (re.compile(r"([jqxy])[uü]", re.I), "\\1v"),
-                    (re.compile(r"([ln])ü", re.I), "\\1v")]
+                    (re.compile(u"([jqxy])[uü]", re.I), "\\1v"),
+                    (re.compile(u"([ln])ü", re.I), "\\1v")]
                     
     # load up that table!
     table_file = open(table_filename)
     table_elements = [[e.strip() for e in r.split('\t')] for r in table_file]
     # clean up the text (6th column)
     for row_i in range(len(table_elements)):
+        table_elements[row_i][text_in] = table_elements[row_i][text_in].decode('utf-8')
         for re_i in range(len(normalzn_rexs)):
-            table_elements[row_i][text_in] = normalzn_rexs[re_i][0].sub(normalzn_rexs[re_i][1], table_elements[row_i][text_in])
-        table_elements[row_i][text_in] = table_elements[row_i][text_in].decode('utf-8').upper()  # is it only unicode because of that last regex??
+            string_to_search = table_elements[row_i][text_in]
+            #print >> sys.stderr, type(string_to_search)
+            re_result = normalzn_rexs[re_i][0].search(string_to_search)
+            if re_result != None:
+                print >> sys.stderr, "Found: ", re_result.group(0) #, "in", table_elements[row_i][text_in]
+                table_elements[row_i][text_in] = normalzn_rexs[re_i][0].sub(normalzn_rexs[re_i][1],string_to_search)
+                print >> sys.stderr, "Changed to: ", table_elements[row_i][text_in]
+        table_elements[row_i][text_in] = table_elements[row_i][text_in].upper()  # is it only unicode because of that last regex??
+    #temp_tbl_file = codecs.open("temptblfile.txt","w","utf-8")
+    #temp_tbl_file.writelines([e[text_in].decode('utf-8') + u"\n" for e in table_elements])
     return table_elements    
 
 
@@ -201,6 +209,7 @@ def do_alignment(table_elements, p2fa_path = "/home/patrick/downloads/p2fa",  te
                 
                 # now align
                 try:
+                    time.sleep(time_to_wait)
                     temp_trs = codecs.open(temp_trs_name, "w", "utf-8")
                     temp_trs.write(table_row[text_in])
                     temp_trs.close()
@@ -210,7 +219,6 @@ def do_alignment(table_elements, p2fa_path = "/home/patrick/downloads/p2fa",  te
                         raise IOError("Alignment failed")
                     # delete the intermediate files
                     os.remove(temp_trs_name)
-                    time.sleep(time_to_wait)
                 except IOError as e:
                     print >> sys.stderr, "Failed on this row***********"
                     print >> sys.stderr, str(e)
@@ -224,25 +232,34 @@ def do_alignment(table_elements, p2fa_path = "/home/patrick/downloads/p2fa",  te
         if num_failed > 0:
             print >> sys.stderr, num_failed, " failed rows, restarting"
             time.sleep(3)
-            print >> sys.stderr, failed_rows
+            #print >> sys.stderr, failed_rows
             
-def combine_textgrids(textgrids_path = "textgrids"):
+def combine_textgrids(textgrids_path = "textgrids", remove_grids = False):
     # run the praat script to compound all the TGs
     praat_cess = subprocess.Popen(['praat'])
     time.sleep(5)
     subprocess.call(['sendpraat', '10', 'praat', 'execute /home/patrick/dissertation/scripts/open_many_textgrids.praat'])
     subprocess.call(['sendpraat', '10', 'praat', 'execute /home/patrick/dissertation/scripts/table_to_textgrid.praat'])
     praat_cess.terminate()
+    if remove_grids == True:
+        assert textgrids_path != ""     # that would be real bad
+        shutil.rmtree(textgrids_path)
+    
    
-def main():
+def main(table_name,sound_path):
     textgrids_path = "textgrids"
     if not os.path.exists(textgrids_path):
-        transcript_data = normalize_data()
+        transcript_data = normalize_data(table_name)
         old_dictionary = create_dictionary(transcript_data)
-        do_alignment(transcript_data)
-    
+        do_alignment(transcript_data,sound_path=sound_path)
     combine_textgrids()
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Do forced alignment on a table.')
+    parser.add_argument('tablepath', metavar='table-path')
+    parser.add_argument('soundpath', metavar='sound-path')
+    args = parser.parse_args()
+    main(args.tablepath, args.soundpath)
     

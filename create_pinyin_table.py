@@ -5,6 +5,7 @@ create_pinyin_table.py
 """
 import sys
 import subprocess
+import convert_to_pinyin
 
 table_filename = sys.argv[1]
 
@@ -18,11 +19,9 @@ table_elements = [r.split('\t') for r in table_rows]
 for t_row in range(0, len(table_elements)):
     to_convert = table_elements[t_row][5].strip()
     
-    conversion_process = subprocess.Popen(['./convert_to_pinyin.py', to_convert],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    (pinyin_string, any_errors) = conversion_process.communicate()
-    if any_errors: print >> sys.stderr, any_errors
-    
-    #print >> sys.stderr, pinyin_string
+    pinyin_string = convert_to_pinyin.main(to_convert)
+        
+    print >> sys.stderr, "Finished with row [", t_row, "/", len(table_elements), "]"
     #print >> sys.stderr, table_elements[t_row][0:5]
     new_row = ('\t'.join(table_elements[t_row][0:5]) + '\t').decode('utf-8') + pinyin_string.strip().decode('utf-8')
     print new_row.encode('utf-8')
