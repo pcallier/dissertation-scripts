@@ -164,51 +164,57 @@ for word in words:
 dict_file.write(have_to_be_in_it)
 dict_file.close()
 
-# now the alignment part!
-# loop through each row of the table and perform an alignment
-#temp_wav_name = "temp.wav"
-temp_trs_name = "temp.txt"
-textgrid_decorator = 1
-num_failed = -1
-time_to_wait = 0.05
-failed_rows = []
-# TODO: have it wait when you fail, and try again
-while num_failed != 0 and time_to_wait < 15:
-    num_failed = 0
+def do_alignment():
+    # now the alignment part!
+    # loop through each row of the table and perform an alignment
+    #temp_wav_name = "temp.wav"
+    temp_trs_name = "temp_trs.txt"
+    textgrid_decorator = 1
+    textgrid_path = "textgrids" #must exist
+    num_failed = -1
+    time_to_wait = 0.05
     failed_rows = []
-    for table_row in table_elements:
-        if table_row[text_in] != "":
-            textgrid_name = "textgrid" + str(textgrid_decorator) + ".textgrid"
-            print >> sys.stderr, "Aligning "+ str(textgrid_decorator) + ": " + table_row[text_in]
+    # TODO: have it wait when you fail, and try again
+    while num_failed != 0 and time_to_wait < 15:
+        num_failed = 0
+        failed_rows = []
+        for table_row in table_elements:
+            if table_row[text_in] != "":
+                textgrid_name = "textgrid" + str(textgrid_decorator) + ".textgrid"
+                print >> sys.stderr, "Aligning "+ str(textgrid_decorator) + ": " + table_row[text_in]
 
-            # try aligning it!
-            start_time = float(table_row[2]) / 1000
-            end_time = float(table_row[3]) / 1000
-            
-            # now align
-            try:
-                temp_trs = codecs.open(temp_trs_name, "w", "utf-8")
-                temp_trs.write(table_row[text_in])
-                temp_trs.close()
-                result_code = subprocess.call(['python', os.path.join(p2fa_path, "align.py"), 
-                    '-s ' + str(start_time), '-e ' + str(end_time), sound_path, temp_trs_name, textgrid_name])
-                if result_code != 0:
-                    raise IOError("Alignment failed")
-                # delete the intermediate files
-                #os.remove(temp_wav_name)
-                os.remove(temp_trs_name)
-                time.sleep(time_to_wait)
-            except IOError as e:
-                print >> sys.stderr, "Failed on this row***********"
-                print >> sys.stderr, str(e)
-                num_failed = num_failed + 1
-                failed_rows.append(table_row)
-            finally:
-                textgrid_decorator = textgrid_decorator + 1
-    time_to_wait = time_to_wait * 1.5
-    table_elements = failed_rows        # destructive, watch out
-    if num_failed > 0:
-        print >> sys.stderr, num_failed, " failed rows, restarting"
-        time.sleep(3)
-        print >> sys.stderr, failed_rows
+                # try aligning it!
+                start_time = float(table_row[2]) / 1000
+                end_time = float(table_row[3]) / 1000
+                
+                # now align
+                try:
+                    temp_trs = codecs.open(temp_trs_name, "w", "utf-8")
+                    temp_trs.write(table_row[text_in])
+                    temp_trs.close()
+                    result_code = subprocess.call(['python', os.path.join(p2fa_path, "align.py"), 
+                        '-s ' + str(start_time), '-e ' + str(end_time), sound_path, temp_trs_name, textgrid_name])
+                    if result_code != 0:
+                        raise IOError("Alignment failed")
+                    # delete the intermediate files
+                    #os.remove(temp_wav_name)
+                    os.remove(temp_trs_name)
+                    time.sleep(time_to_wait)
+                except IOError as e:
+                    print >> sys.stderr, "Failed on this row***********"
+                    print >> sys.stderr, str(e)
+                    num_failed = num_failed + 1
+                    failed_rows.append(table_row)
+                finally:
+                    textgrid_decorator = textgrid_decorator + 1
+        time_to_wait = time_to_wait * 1.5
+        table_elements = failed_rows        # destructive, watch out
+        if num_failed > 0:
+            print >> sys.stderr, num_failed, " failed rows, restarting"
+            time.sleep(3)
+            print >> sys.stderr, failed_rows
    
+if __name__ == "__main__":
+    normalize_data()
+    create_dictionary()
+    do_alignment()
