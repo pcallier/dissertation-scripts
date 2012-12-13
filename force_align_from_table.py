@@ -28,11 +28,10 @@ import codecs
 import subprocess
 import time
 
+text_in = 5
 
 def normalize_data(table_filename = "test_table.txt"):
     table_filename = "test_table.txt"
-    sound_path = "/home/patrick/sf_Patrick/Documents/audio/2012interviews/LS100197_mono.wav"
-    sound_channel = None     # the sound is in the left channel, set to None to disable extraction
 
     # normalize transcript data in table
     # these tuples of regexes and substitution strings will be 
@@ -54,7 +53,6 @@ def normalize_data(table_filename = "test_table.txt"):
     table_file = open(table_filename)
     table_elements = [[e.strip() for e in r.split('\t')] for r in table_file]
     # clean up the text (6th column)
-    text_in = 5
     for row_i in range(len(table_elements)):
         for re_i in range(len(normalzn_rexs)):
             table_elements[row_i][text_in] = normalzn_rexs[re_i][0].sub(normalzn_rexs[re_i][1], table_elements[row_i][text_in])
@@ -62,19 +60,19 @@ def normalize_data(table_filename = "test_table.txt"):
     return table_elements    
 
 
-def create_dictionary():
+def create_dictionary(table_elements, p2fa_path = "/home/patrick/downloads/p2fa"):
     # take anything not between {} and add it to a dictionary!        
     have_to_be_in_it = """{BR}  br
-    {CG}  cg
-    {LG}  lg
-    {LS}  ls
-    {NS}  ns
-    {SL} sil
-    silence  sil
-    sp sp
-    !ENTER []
-    !EXIT []
-    """
+{CG}  cg
+{LG}  lg
+{LS}  ls
+{NS}  ns
+{SL} sil
+silence  sil
+sp sp
+!ENTER []
+!EXIT []
+"""
 
     initial_re = re.compile(u'^[^AEIOUÜV]*',re.U)
     final_re = re.compile(u'[AEIOUÜV].*(?=[1-5])',re.U)
@@ -168,13 +166,16 @@ def create_dictionary():
     dict_file.close()
     return backup_path
 
-def do_alignment(table_elements, p2fa_path = "/home/patrick/downloads/p2fa",  textgrid_path = "textgrids"):
+def do_alignment(table_elements, p2fa_path = "/home/patrick/downloads/p2fa",  textgrids_path = "textgrids", sound_path = "/home/patrick/sf_Patrick/Documents/audio/2012interviews/LS100197_mono.wav"):
     # now the alignment part!
     # loop through each row of the table and perform an alignment
     #temp_wav_name = "temp.wav"
     temp_trs_name = "temp_trs.txt"
     textgrid_decorator = 1
-    textgrids_path = "textgrids"   #must exist
+    
+
+    #sound_channel = None     # the sound is in the left channel, set to None to disable extraction
+
     num_failed = -1
     time_to_wait = 0.05     # a lot of filesystem operations
                             # means we will fail,
@@ -182,18 +183,21 @@ def do_alignment(table_elements, p2fa_path = "/home/patrick/downloads/p2fa",  te
                             # and try again after a salutary rest
     time_out_limit = 15
     failed_rows = []
-    # TODO: have it wait when you fail, and try again
+    
+    # set up temp textgrids directory
+    os.system("mkdir " + textgrids_path)
+    # TODO: remove this directory when finished
+    
     while num_failed != 0 and time_to_wait < time_out_limit:
         num_failed = 0
         failed_rows = []
         for table_row in table_elements:
             if table_row[text_in] != "":
-                textgrid_name = os.path.join(textgrids_path, "textgrid" + str(textgrid_decorator) + ".textgrid")
-                print >> sys.stderr, "Aligning "+ str(textgrid_decorator) + ": " + table_row[text_in]
-
-                # try aligning it!
                 start_time = float(table_row[2]) / 1000
                 end_time = float(table_row[3]) / 1000
+                textgrid_decorator =  start_time
+                textgrid_name = os.path.join(textgrids_path, "textgrid" + str(textgrid_decorator) + ".textgrid")
+                print >> sys.stderr, "Aligning "+ str(textgrid_decorator) + ": " + table_row[text_in]
                 
                 # now align
                 try:
@@ -213,18 +217,31 @@ def do_alignment(table_elements, p2fa_path = "/home/patrick/downloads/p2fa",  te
                     num_failed = num_failed + 1
                     failed_rows.append(table_row)
                 finally:
-                    textgrid_decorator = textgrid_decorator + 1
+                    pass
+                    #textgrid_decorator = textgrid_decorator + 1
         time_to_wait = time_to_wait * 1.5
         table_elements = failed_rows        # destructive, watch out
         if num_failed > 0:
             print >> sys.stderr, num_failed, " failed rows, restarting"
             time.sleep(3)
             print >> sys.stderr, failed_rows
+            
+def combine_textgrids(textgrids_path = "textgrids"):
+    # run the praat script to compound all the TGs
+    praat_cess = subprocess.Popen(['praat'])
+    time.sleep(5)
+    subprocess.call(['sendpraat', '10', 'praat', 'execute /home/patrick/dissertation/scripts/open_many_textgrids.praat'])
+    subprocess.call(['sendpraat', '10', 'praat', 'execute /home/patrick/dissertation/scripts/table_to_textgrid.praat'])
+    praat_cess.terminate()
    
 def main():
-    transcript_data = normalize_data()
-    old_dictionary = create_dictionary()
-    do_alignment(transcript_data)
+    textgrids_path = "textgrids"
+    if not os.path.exists(textgrids_path):
+        transcript_data = normalize_data()
+        old_dictionary = create_dictionary(transcript_data)
+        do_alignment(transcript_data)
+    
+    combine_textgrids()
 
 if __name__ == "__main__":
     main()
