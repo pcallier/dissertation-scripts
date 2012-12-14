@@ -150,7 +150,7 @@ sp sp
         'UANG':	'W AA1 NG',
 
         u'V':	'IY1',
-        u'VE':	'IY1 EY0',
+        u'VE':	'IY1 EH0',
         u'VAN':	'IY1 EH0 N',
         u'VN':	'IY1 AH0 N'}
     for word in words:

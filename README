@@ -1,0 +1,8 @@
+This directory contains several scripts to aid in data preparation, measurement and analysis.
+
+There is a recommended flow:
+1. Obtain tab-delimited text output from ELAN (of one tier)
+2. Convert it to pinyin if necessary with create_pinyin_table.py (which imports convert_to_pinyin)
+3. Create alignments from the table with force_align_from_table.py (also needs the sound file
+4. Using the alignments, chop up the wavs and TextGrids with save_labeled_intervals_to_wav_sound_files.praat (from online)
+5. Feed the results through PraatVoiceSauceImitator.praat (from online, modified)
